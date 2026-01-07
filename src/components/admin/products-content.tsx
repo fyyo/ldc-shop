@@ -45,18 +45,22 @@ interface AdminProductsContentProps {
 
 export function AdminProductsContent({ products, stats, shopName, visitorCount, lowStockThreshold, checkinReward, recentOrders, checkinEnabled }: AdminProductsContentProps) {
     const { t } = useI18n()
+
+    // State
     const [shopNameValue, setShopNameValue] = useState(shopName || '')
     const [savingShopName, setSavingShopName] = useState(false)
     const [thresholdValue, setThresholdValue] = useState(String(lowStockThreshold || 5))
     const [savingThreshold, setSavingThreshold] = useState(false)
+    // Use distinct name to avoid ANY collision
     const [rewardValue, setRewardValue] = useState(String(checkinReward || 10))
     const [savingReward, setSavingReward] = useState(false)
     const [enabledCheckin, setEnabledCheckin] = useState(checkinEnabled)
     const [savingEnabled, setSavingEnabled] = useState(false)
 
+    // Memo
     const lowStockCount = useMemo(() => {
         const threshold = Number.parseInt(thresholdValue, 10) || 5
-        return products.filter(p => p.stockCount <= threshold).length
+        return (products || []).filter(p => p.stockCount <= threshold).length
     }, [products, thresholdValue])
 
     const handleDelete = async (id: string) => {
