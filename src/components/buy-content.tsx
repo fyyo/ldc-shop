@@ -10,6 +10,7 @@ import { StarRating } from "@/components/star-rating"
 import { ReviewForm } from "@/components/review-form"
 import { ReviewList } from "@/components/review-list"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
     Dialog,
     DialogContent,
@@ -201,9 +202,36 @@ export function BuyContent({
                                                     >
                                                         -
                                                     </Button>
-                                                    <div className="w-12 text-center text-sm font-medium">
-                                                        {quantity}
-                                                    </div>
+                                                    <Input
+                                                        type="text"
+                                                        value={quantity}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value
+                                                            if (val === '') {
+                                                                setQuantity(1)
+                                                                return
+                                                            }
+                                                            const num = parseInt(val)
+                                                            if (!isNaN(num)) {
+                                                                setQuantity(num)
+                                                            }
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            let val = parseInt(e.target.value)
+                                                            if (isNaN(val) || val < 1) val = 1
+
+                                                            const limit = product.purchaseLimit && product.purchaseLimit > 0 ? product.purchaseLimit : 999
+                                                            const max = Math.min(stockCount, limit)
+
+                                                            if (val > max) {
+                                                                val = max
+                                                                toast.error(t('buy.limitExceeded'))
+                                                            }
+
+                                                            setQuantity(val)
+                                                        }}
+                                                        className="w-16 h-8 rounded-none border-x-0 text-center px-1 focus-visible:ring-0 focus-visible:border-primary"
+                                                    />
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
