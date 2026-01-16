@@ -149,6 +149,7 @@ async function ensureDatabaseInitialized() {
 async function ensureProductsColumns() {
     await safeAddColumn('products', 'compare_at_price', 'TEXT');
     await safeAddColumn('products', 'is_hot', 'INTEGER DEFAULT 0');
+    await safeAddColumn('products', 'purchase_warning', 'TEXT');
 }
 
 async function ensureOrdersColumns() {
@@ -162,7 +163,8 @@ async function withProductColumnFallback<T>(fn: () => Promise<T>): Promise<T> {
         return await fn()
     } catch (error: any) {
         const errorString = JSON.stringify(error)
-        if (errorString.includes('42703')) {
+        // Check for missing column errors (PostgreSQL: 42703, SQLite/D1: no such column)
+        if (errorString.includes('42703') || errorString.includes('no such column')) {
             await ensureProductsColumns()
             return await fn()
         }
@@ -289,9 +291,17 @@ export async function getProductForAdmin(id: string) {
 
         return result[0] || null;
     } catch (error: any) {
-        // If purchaseWarning column doesn't exist, try without it
+        // If purchaseWarning column doesn't exist, auto-add it and retry
         const errorString = JSON.stringify(error);
         if (errorString.includes('no such column') || errorString.includes('purchase_warning')) {
+            console.log('Auto-adding purchase_warning column to products table...');
+            try {
+                await db.run(sql`ALTER TABLE products ADD COLUMN purchase_warning TEXT`);
+            } catch {
+                // Column might already exist, ignore
+            }
+            
+            // Retry the query
             const result = await db.select({
                 id: products.id,
                 name: products.name,
@@ -303,15 +313,12 @@ export async function getProductForAdmin(id: string) {
                 isHot: products.isHot,
                 isActive: products.isActive,
                 purchaseLimit: products.purchaseLimit,
+                purchaseWarning: products.purchaseWarning,
             })
                 .from(products)
                 .where(eq(products.id, id));
 
-            const product = result[0];
-            if (product) {
-                return { ...product, purchaseWarning: null };
-            }
-            return null;
+            return result[0] || null;
         }
         throw error;
     }
